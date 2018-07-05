@@ -1,1 +1,4 @@
-"C:\Program Files\VCG\MeshLab\meshlabserver.exe" -i OutputFile.txt -o OutputFile.stl -s meshclean.mlx
+cd Input
+for %%X in (*.txt) do "C:\Program Files\VCG\MeshLab\meshlabserver.exe" -i "%%X" -o "../Output/%%X.stl" -s ../meshclean.mlx
+
+pause
