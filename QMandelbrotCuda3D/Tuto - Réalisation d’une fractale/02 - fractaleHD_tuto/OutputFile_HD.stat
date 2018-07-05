@@ -1,0 +1,24 @@
+Parameters Current : 
+				Q_start = -2.55, Q_end = 2.55, Q_Step = 0.51, Nbpoints = 10
+				x_value = 0.3375
+				FileOutput = OutputFile
+				itermax = 255
+				Rmax = 4
+				Filter = 2
+				POWER = 3.5
+				dev = 1
+				IsShow = 0
+				NpStep =  10
+				NbPoints per step = 64
+				ouput File :  OutputFile
+cmd for use this configuration: 
+               Programme.exe -X 0.3375 -Q_start -2.55 -Q_end 2.55 -NbPoints 10 -o OutputFile -IsShow 0 -dev 1 -Power 3.5 -Filter 2 
+Statistiques : 
+				X = 0.3375
+				Y min = -1.5381
+				Y max = 1.5381
+				Z min = -2.55
+				Z max = 2.55
+				W min = -0.785238
+				W max = 0.882381
+				NbPoint plot = 602564
