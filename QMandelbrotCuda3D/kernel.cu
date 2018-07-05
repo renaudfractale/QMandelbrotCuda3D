@@ -5,8 +5,8 @@
 #include <math.h> //lib mayh
 #include <stdio.h> // lib stantard
 #include <cuda_fp16.h> // lib CUDA
-
-
+#include <windows.h>
+#define NbPointPerStep 64;
 // Pour X,Y,Z et W
 typedef struct 	struct_P_float {
 	float start;
@@ -15,6 +15,16 @@ typedef struct 	struct_P_float {
 	float step;
 } struct_P_float_T;
 
+typedef struct 	struct_Stat_float {
+	float X;
+	float Wmin;
+	float Wmax;
+	float Ymin;
+	float Ymax;
+	float Zmin;
+	float Zmax;
+	unsigned long NbPoint;
+} struct_Stat_float_T;
 
 typedef struct 	struct_P_Power {
 	float value;
@@ -41,6 +51,7 @@ typedef struct 	struct_P_Simulation {
 	float Rlimit;
 	//Parametrer variable systematique
 	float Power;
+	int Filter;
 } struct_P_Simulation_T;
 
 typedef struct 	struct_Q {
@@ -52,7 +63,125 @@ typedef struct 	struct_Q {
 
 struct_P_Simulation_T *P_Simulation_DEVICE;
 short *Tab_Iter;
+__host__  void CreateQ_By_float_H(struct_Q_T *out, float x, float y, float z, float w)
+{
+	out->x = x;
+	out->y = y;
+	out->z = z;
+	out->w = w;
+}
 
+__host__  float  Get_QNorm_H(struct_Q_T *Q)
+{
+	return sqrtf(Q->x*Q->x + Q->y*Q->y + Q->z*Q->z + Q->w*Q->w);
+}
+
+__host__ void Get_QPow_H(struct_Q_T *Q, float pow)
+{
+	float A = Get_QNorm_H(Q);
+	float theta = 0.0f;
+	float B = 0.0f;
+	float R = 0.0f;
+	if (pow > 0.0f && A>0.000001f)
+	{
+		float coef = 1.0f;
+		if (A<1.0f)
+		{
+			//printf("%f *******\n", A);
+			coef = 1 / A;
+			Q->x *= coef;
+			Q->y *= coef;
+			Q->z *= coef;
+			Q->z *= coef;
+
+		}
+		A = Get_QNorm_H(Q);
+		//printf("%f +++++++++\n", A);
+		theta = acosf(Q->w / A)*pow;
+		B = sqrt(A*A - Q->w*Q->w);
+		R = exp2f(logf(A / coef)* pow);
+		Q->x = R*sinf(theta)*(Q->x / B);
+		Q->y = R*sinf(theta)*(Q->y / B);
+		Q->z = R*sinf(theta)*(Q->z / B);
+		Q->z = R*cosf(theta);
+
+	}
+	else
+	{
+		//printf("%f --------\n", A);
+		Q->w = 0.0f;
+		Q->x = 0.0f;
+		Q->y = 0.0f;
+		Q->z = 0.0f;
+
+	}
+}
+
+__host__ int  GetQIter_H(struct_P_Simulation_T *P_Simulation_DEVICE, int  *y_filter, int *z_filter,int *w_filter)
+{
+	//int Tempindex = 0;
+	struct_Q_T Q_Current;
+	float w, x, y, z;
+	int iter_computed;
+	//X
+	x = P_Simulation_DEVICE->X.value;
+	//Y
+	y = ((float)*y_filter)*P_Simulation_DEVICE->Y.step + P_Simulation_DEVICE->Y.start;
+	//Z
+	z = ((float)*z_filter)*P_Simulation_DEVICE->Z.step + P_Simulation_DEVICE->Z.start;
+	//W
+	w = ((float)*w_filter)*P_Simulation_DEVICE->W.step + P_Simulation_DEVICE->W.start;
+
+
+
+	CreateQ_By_float_H(&Q_Current, x, y, z, w);
+
+	for (iter_computed = 0; iter_computed <= P_Simulation_DEVICE->Iter.end; iter_computed++)
+	{
+		Get_QPow_H(&Q_Current, P_Simulation_DEVICE->Power);
+		Q_Current.x += x;
+		Q_Current.y += y;
+		Q_Current.z += z;
+		Q_Current.w += w;
+
+		if (Get_QNorm_H(&Q_Current) > P_Simulation_DEVICE->Rlimit)
+		{
+			if (iter_computed > 0)
+				iter_computed--;
+			return iter_computed;
+		}
+	}
+	if (iter_computed > 0)
+		iter_computed--;
+	return iter_computed;
+}
+__host__ bool  FilterQ_H(int *Filter,int *Ny, int *Nz, int *Nw, int iter, struct_P_Simulation_T *P_Simulation_DEVICE)
+{
+	if (*Filter == 0)
+		return true;
+	int iter_computed = 0;
+	for (int y_filter = *Ny - 1; y_filter <= *Ny + 1; y_filter++)
+	{
+		for (int z_filter = *Nz - 1; z_filter <= *Nz + 1; z_filter++)
+		{
+			for (int w_filter = *Nw - 1; w_filter <= *Nw + 1; w_filter++)
+			{
+				iter_computed = GetQIter_H(P_Simulation_DEVICE, &y_filter, &z_filter, &w_filter);
+				if (*Filter == 1)
+				{
+					if (iter_computed != iter)
+						return true;
+				}
+				else //filter==2
+				{
+					if (iter_computed == 0)
+						return true;
+				}
+			}
+		}
+	}
+	return false;
+}
 
 __device__  void CreateQ_By_float(struct_Q_T *out, float x, float y, float z, float w)
 {
@@ -117,8 +246,26 @@ __device__ void Get_QPow(struct_Q_T *Q, float pow)
 //	Q1->w += Q2->w;
 //}
 
-
-
+//__device__ void GetIterMax(int *iter, float *x, float *y, float *z, float *w, const struct_P_Simulation_T *P_Simulation)
+//{
+//	struct_Q_T Q_Current; 
+//	CreateQ_By_float(&Q_Current, *x, *y, *z, *w);
+//
+//	for (iter = 0; *iter <= P_Simulation->Iter.end; iter++)
+//	{
+//		Get_QPow(&Q_Current, P_Simulation->Power);
+//		Q_Current.x += *x;
+//		Q_Current.y += *y;
+//		Q_Current.z += *z;
+//		Q_Current.w += *w;
+//
+//		if (Get_QNorm(&Q_Current) > P_Simulation->Rlimit)
+//			goto Fin;
+//	}
+//Fin:
+//	if (iter > 0)
+//		iter--;
+//}
 
 
 // CUDA kernel to Compute itermax of quaternion
@@ -155,6 +302,39 @@ Fin:
 		iter--;
 	Tab_Iter[(blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x + threadIdx.x] = (short)iter;
 }
+//
+//
+//// CUDA kernel to Compute itermax of quaternion
+//__global__ void kernel(const struct_P_Simulation_T *P_Simulation, short *Tab_Iter)
+//{
+//	struct_Q_T Q_Current;
+//	float w, y, z;
+//	int iter = 0;
+//	//Y
+//	y = ((float)blockIdx.y)*P_Simulation->Y.step + P_Simulation->Y.start;
+//	//Z
+//	z = ((float)blockIdx.x)*P_Simulation->Z.step + P_Simulation->Z.start;
+//	//W
+//	w = ((float)threadIdx.x)*P_Simulation->W.step + P_Simulation->W.start;
+//
+//	CreateQ_By_float(&Q_Current, P_Simulation->X.value, y, z, w);
+//
+//	for (iter = 0; iter <= P_Simulation->Iter.end; iter++)
+//	{
+//		Get_QPow(&Q_Current, P_Simulation->Power);
+//		Q_Current.x += P_Simulation->X.value;
+//		Q_Current.y += y;
+//		Q_Current.z += z;
+//		Q_Current.w += w;
+//
+//		if (Get_QNorm(&Q_Current) > P_Simulation->Rlimit)
+//			goto Fin;
+//	}
+//	Fin:
+//	if (iter > 0)
+//		iter--;
+//	Tab_Iter[(blockIdx.y * gridDim.x + blockIdx.x) * blockDim.x + threadIdx.x] = (short)iter;
+//}
 
 int main(int argc, char *argv[])
 {
@@ -165,9 +345,9 @@ int main(int argc, char *argv[])
 	ParameterDelaults.NbPoints = 10;
 	char Str_NbPoints[] = "-NbPoints";
 	//********************* Parameter y,z,w *************
-	ParameterDelaults.start = -3.0f;
+	ParameterDelaults.start = -8.0f;
 	char Str_Q_start[] = "-Q_start";
-	ParameterDelaults.end = 3.0f;
+	ParameterDelaults.end = 8.0f;
 	char Str_Q_end[] = "-Q_end";
 	ParameterDelaults.step = (ParameterDelaults.end - ParameterDelaults.start) / ((float)ParameterDelaults.NbPoints - 1);
 	//char Str_Q_step[] = "-Q_step";
@@ -175,6 +355,7 @@ int main(int argc, char *argv[])
 	char NameFile[110];
 	char NameFile_csv[110];
 	char NameFile_histo[110];
+	char NameFile_stat[110];
 	strcpy(NameFile, "OutputFile");
 	char Str_NameFile[] = "-o";
 	//*********************  X value *************
@@ -190,12 +371,14 @@ int main(int argc, char *argv[])
 	int itermax = 255;
 	float Rmax = 4.0;
 
-	int dev = 0;
+	int dev = 1;
 	char Str_dev[] = "-dev";
 
-	bool IsShow = 0;
+	bool IsShow = 1;
 	char Str_IsShow[] = "-IsShow";
 
+	int Filter = 2;
+	char Str_Filter[] = "-Filter";
 	if (argc > 1)
 	{
 		if (argc % 2 == 0)
@@ -231,7 +414,11 @@ int main(int argc, char *argv[])
 					std::cout << "                  Ctrt 03 : dev must be sup or equal 0 \n";
 					std::cout << "      -IsShow : bool if show message in cmd, true (1) by default \n";
 					std::cout << "                  Ctrt 03 : IsShow must be type int (0 or 1)\n";
-					std::cout << "                  Ctrt 03 : IsShow must be sup or equal 0 \n";
+					std::cout << "      -Filter : int if you would to filter clould points, 0 by default \n";
+					std::cout << "                  Ctrt 03 : Filter must be type int (0 or 1 or 2)\n";
+					std::cout << "                  Option 0 : Not Filter \n";
+					std::cout << "                  Option 1 : Filter on iter_around  must be equal inter_computed \n";
+					std::cout << "                  Option 2 : Filter on iter_around  must be sup 0 \n";
 					std::cout << "      -h / --help : show help \n";
 					std::cout << "      Example :\n";
 					std::cout << "               Programme.exe -X 0.3375 -Q_start -3.0 -Q_end 3.0 -NbPoints 4 -Power 2.5 -o FileOutput \n";
@@ -326,7 +513,30 @@ int main(int argc, char *argv[])
 					std::cout << "Error 12 " << Str_dev << ": value of dev > countdevice, " << dev << " > " << count << "\n";
 					return -1;
 				}
-
+				if (dev < 0)
+				{
+					std::cout << "Error 13 " << Str_dev << ": value of dev < 0 , " << dev << " <" << 0 << "\n";
+					return -1;
+				}
+			}
+			else if ((strcmp(argv[i], Str_Filter) == 0))
+			{
+				Filter = atoi(argv[i + 1]);
+				if (errno)
+				{
+					std::cout << "Error 14 " << Str_Filter << ": value is not type int " << "\n";
+					return -1;
+				}
+				if (Filter >3)
+				{
+					std::cout << "Error 15 " << Str_Filter << ": value of dev > 3, " << Filter << " > " << 3 << "\n";
+					return -1;
+				}
+				if (Filter < 0)
+				{
+					std::cout << "Error 16 " << Str_Filter << ": value of dev < 0 , " << Filter << " < " << 0 << "\n";
+					return -1;
+				}
 			}
 			else if ((strcmp(argv[i], Str_NameFile) == 0))
 			{
@@ -374,15 +584,67 @@ int main(int argc, char *argv[])
 		std::cout << "Error 06 NbPoints < 1:  So NbPoints must be sup 0 \n";
 		return -1;
 	}
+
+	//CST 
+	const int NbPoints = NbPointPerStep;
+
 	/****** Print Parmaters Used ******/
 	std::cout << "Parameters Current : " << "\n";
 	std::cout << "		Q_start = " << ParameterDelaults.start << ", Q_end = " << ParameterDelaults.end << ", Q_Step = " << ParameterDelaults.step << ", Nbpoints = " << ParameterDelaults.NbPoints << "\n";
 	std::cout << "		x_value = " << X << "\n";
 	std::cout << "		FileOutput = " << NameFile << "\n";
-	std::cout << "		IterMax_Max = " << itermax << ", Rmax = " << Rmax << "\n";
+	std::cout << "		itermax = " << itermax << "\n";
+	std::cout << "		Rmax = " << Rmax << "\n";
+	std::cout << "		Filter = " << Filter << "\n";
+	std::cout << "		POWER = " << POWER << "\n";
+	std::cout << "		dev = " << dev << "\n";
+	std::cout << "		IsShow = " << IsShow << "\n";
+	std::cout << "				NpStep =  " << ParameterDelaults.NbPoints << "\n";
+	std::cout << "				NbPoints per step = " << NbPoints << "\n";
+	std::cout << "				ouput File :  " << NameFile << "\n";
+	std::cout << "cmd for use this configuration: " << "\n";
+	std::cout << "               Programme.exe -X " << X << " -Q_start " << ParameterDelaults.start << " -Q_end " << ParameterDelaults.end << " -NbPoints " << ParameterDelaults.NbPoints << " -o " << NameFile << " -IsShow " << IsShow << " -dev " << dev << " -Power " << POWER << " -Filter " << Filter << " \n";
 
-	/********  Clear File ************/
+	
+
+
 	std::ofstream file;
+	strcpy(NameFile_stat, NameFile);
+	strcat(NameFile_stat, ".stat");
+	file.open(NameFile_stat);
+	file << "Parameters Current : " << "\n";
+	file << "				Q_start = " << ParameterDelaults.start << ", Q_end = " << ParameterDelaults.end << ", Q_Step = " << ParameterDelaults.step << ", Nbpoints = " << ParameterDelaults.NbPoints << "\n";
+	file << "				x_value = " << X << "\n";
+	file << "				FileOutput = " << NameFile << "\n";
+	file << "				itermax = " << itermax << "\n";
+	file << "				Rmax = " << Rmax << "\n";
+	file << "				Filter = " << Filter << "\n";
+	file << "				POWER = " << POWER << "\n";
+	file << "				dev = " << dev << "\n";
+	file << "				IsShow = " << IsShow << "\n";
+	file << "				NpStep =  " << ParameterDelaults.NbPoints << "\n";
+	file << "				NbPoints per step = " << NbPoints << "\n";
+	file << "				ouput File :  " << NameFile << "\n";
+	file << "cmd for use this configuration: " << "\n";
+	file <<"               Programme.exe -X " << X << " -Q_start " << ParameterDelaults.start << " -Q_end " << ParameterDelaults.end << " -NbPoints " << ParameterDelaults.NbPoints << " -o " << NameFile << " -IsShow " << IsShow << " -dev " << dev << " -Power " << POWER << " -Filter " << Filter << " \n";
+	file.close();
+
+	//Init Stat
+	struct_Stat_float_T Stat;
+	Stat.X = X;
+
+	Stat.Ymax = ParameterDelaults.start;
+	Stat.Ymin = ParameterDelaults.end;
+
+	Stat.Zmax = ParameterDelaults.start;
+	Stat.Zmin = ParameterDelaults.end;
+
+	Stat.Wmax = ParameterDelaults.start;
+	Stat.Wmin = ParameterDelaults.end;
+
+	Stat.NbPoint = (unsigned long)0;
+	/********  Clear File ************/
+	
 	strcpy(NameFile_csv, NameFile);
 	strcat(NameFile_csv, ".csv");
 	file.open(NameFile_csv);
@@ -401,7 +663,6 @@ int main(int argc, char *argv[])
 	//#################### Constante(s) #################
 
 	const int  maxMaster = ParameterDelaults.NbPoints * ParameterDelaults.NbPoints  * ParameterDelaults.NbPoints;
-	const int NbPoints = 128;
 	const int  maxMinor = NbPoints * NbPoints  * NbPoints;
 
 	//#################### Variables(s) #################
@@ -537,23 +798,47 @@ int main(int argc, char *argv[])
 			float x = P_Simulation_DEVICE->X.value;
 
 			//Y
+			int Ny = j / (NbPoints*NbPoints);
 			float y = ((float)(j / (NbPoints*NbPoints))*P_Simulation_DEVICE->Y.step) + P_Simulation_DEVICE->Y.start;
 			// on retranche 
 			j -= (j / (NbPoints*NbPoints))*(NbPoints*NbPoints);
 
 			//Z
+			int Nz = j / (NbPoints);
 			float z = (float)(j / NbPoints)*P_Simulation_DEVICE->Z.step + P_Simulation_DEVICE->Z.start;
 			// on retranche Q2
 			j -= (j / NbPoints)*NbPoints;
 
 			//W
+			int Nw = j;
 			//printf("index = %d  - Z Tempindex = %d \n", i, Tempindex);
 			float w = (((float)j)*P_Simulation_DEVICE->W.step) + P_Simulation_DEVICE->W.start;
 
 			short iter = Tab_Iter[i];
 			if (iter > 0)
 			{
-				file << x << ";" << y << ";" << z << ";" << w << ";" << iter << ";\n";
+				if (FilterQ_H(&Filter, &Ny, &Nz, &Nw, (int)iter, P_Simulation_DEVICE))
+				{
+					;
+					file << x << ";" << y << ";" << z << ";" << w << ";" << iter << ";\n";
+					if (y > Stat.Ymax)
+						Stat.Ymax = y;
+					if (y < Stat.Ymin)
+						Stat.Ymin = y;
+
+					if (z > Stat.Zmax)
+						Stat.Zmax = z;
+					if (z < Stat.Zmin)
+						Stat.Zmin = z;
+
+					if (w > Stat.Wmax)
+						Stat.Wmax = w;
+					if (w < Stat.Wmin)
+						Stat.Wmin = w;
+
+					Stat.NbPoint++;
+				}
+					
 			}
 
 		}
@@ -569,5 +854,17 @@ int main(int argc, char *argv[])
 		if (IsShow)
 			std::cout << "Clear Mem + Reste  -->  End" << "\n";
 	}
+
+	file.open(NameFile_stat, std::ofstream::out | std::ofstream::app);
+	file << "Statistiques : \n";
+	file << "				X = " << Stat.X << "\n";
+	file << "				Y min = " << Stat.Ymin << "\n";
+	file << "				Y max = " << Stat.Ymax << "\n";
+	file << "				Z min = " << Stat.Zmin << "\n";
+	file << "				Z max = " << Stat.Zmax << "\n";
+	file << "				W min = " << Stat.Wmin << "\n";
+	file << "				W max = " << Stat.Wmax << "\n";
+	file << "				NbPoint plot = " << Stat.NbPoint << "\n";
+	file.close();
 	return 0;
 }
