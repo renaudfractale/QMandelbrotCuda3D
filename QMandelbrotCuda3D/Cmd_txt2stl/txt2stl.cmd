@@ -1,0 +1,1 @@
+"C:\Program Files\VCG\MeshLab\meshlabserver.exe" -i OutputFile.txt -o OutputFile.stl -s meshclean.mlx

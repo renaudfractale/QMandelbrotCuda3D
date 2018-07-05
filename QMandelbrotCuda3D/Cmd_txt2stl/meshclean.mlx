@@ -1,0 +1,6 @@
+<!DOCTYPE FilterScript>
+<FilterScript>
+ <filter name="Compute normals for point sets"/>
+ <filter name="Surface Reconstruction: Ball Pivoting"/>
+ <filter name="Remove Duplicate Faces"/>
+</FilterScript>
