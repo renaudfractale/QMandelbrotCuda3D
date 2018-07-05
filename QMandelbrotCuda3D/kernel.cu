@@ -356,13 +356,14 @@ int main(int argc, char *argv[])
 	char NameFile_csv[110];
 	char NameFile_histo[110];
 	char NameFile_stat[110];
+	char NameFile_txt[110];
 	strcpy(NameFile, "OutputFile");
 	char Str_NameFile[] = "-o";
 	//*********************  X value *************
 	float X = -0.3375f;
 	char Str_X[] = "-X";
 
-	float POWER = 2.0;
+	float POWER = 3.5;
 	char Str_Power[] = "-Power";
 
 	char Str_H[] = "-h";
@@ -644,7 +645,13 @@ int main(int argc, char *argv[])
 
 	Stat.NbPoint = (unsigned long)0;
 	/********  Clear File ************/
-	
+	std::ofstream filetxt;
+	strcpy(NameFile_txt, NameFile);
+	strcat(NameFile_txt, ".txt");
+	filetxt.open(NameFile_txt);
+	filetxt.close();
+
+
 	strcpy(NameFile_csv, NameFile);
 	strcat(NameFile_csv, ".csv");
 	file.open(NameFile_csv);
@@ -790,7 +797,7 @@ int main(int argc, char *argv[])
 		if (IsShow)
 			std::cout << "Write csv -->  Start" << "\n";
 		file.open(NameFile_csv, std::ofstream::out | std::ofstream::app);
-
+		filetxt.open(NameFile_txt, std::ofstream::out | std::ofstream::app);
 		for (int i = 0; i < maxMinor; i++)
 		{
 			int j = i;
@@ -837,11 +844,13 @@ int main(int argc, char *argv[])
 						Stat.Wmin = w;
 
 					Stat.NbPoint++;
+					filetxt << y << ";" << z << ";" << w << "\n";
 				}
 					
 			}
 
 		}
+		filetxt.close();
 		file.close();
 		if (IsShow)
 			std::cout << "Write csv -->  End" << "\n";
