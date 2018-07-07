@@ -117,7 +117,7 @@ __host__ void Get_QPow_H(struct_Q_T *Q, float pow)
 	}
 }
 
-__host__ int  GetQIter_H(struct_P_Simulation_T *P_Simulation_DEVICE, int  *y_filter, int *z_filter,int *w_filter)
+__host__ int  GetQIter_H(struct_P_Simulation_T *P_Simulation_DEVICE, int  *y_filter, int *z_filter, int *w_filter)
 {
 	//int Tempindex = 0;
 	struct_Q_T Q_Current;
@@ -155,7 +155,7 @@ __host__ int  GetQIter_H(struct_P_Simulation_T *P_Simulation_DEVICE, int  *y_fil
 		iter_computed--;
 	return iter_computed;
 }
-__host__ bool  FilterQ_H(int *Filter,int *Ny, int *Nz, int *Nw, int iter, struct_P_Simulation_T *P_Simulation_DEVICE)
+__host__ bool  FilterQ_H(int *Filter, int *Ny, int *Nz, int *Nw, int iter, struct_P_Simulation_T *P_Simulation_DEVICE)
 {
 	if (*Filter == 0)
 		return true;
@@ -342,12 +342,12 @@ int main(int argc, char *argv[])
 	//#################### CONFIG par DEFAUT #################
 	struct_P_float_T ParameterDelaults;
 	// ******************** NbPoints **************
-	ParameterDelaults.NbPoints = 10;
+	ParameterDelaults.NbPoints = 2;
 	char Str_NbPoints[] = "-NbPoints";
 	//********************* Parameter y,z,w *************
-	ParameterDelaults.start = -8.0f;
+	ParameterDelaults.start = -4.0f;
 	char Str_Q_start[] = "-Q_start";
-	ParameterDelaults.end = 8.0f;
+	ParameterDelaults.end = 4.0f;
 	char Str_Q_end[] = "-Q_end";
 	ParameterDelaults.step = (ParameterDelaults.end - ParameterDelaults.start) / ((float)ParameterDelaults.NbPoints - 1);
 	//char Str_Q_step[] = "-Q_step";
@@ -375,7 +375,7 @@ int main(int argc, char *argv[])
 	int dev = 1;
 	char Str_dev[] = "-dev";
 
-	bool IsShow = 1;
+	bool IsShow = true;
 	char Str_IsShow[] = "-IsShow";
 
 	int Filter = 2;
@@ -424,7 +424,7 @@ int main(int argc, char *argv[])
 					std::cout << "      Example :\n";
 					std::cout << "               Programme.exe -X 0.3375 -Q_start -3.0 -Q_end 3.0 -NbPoints 4 -Power 2.5 -o FileOutput \n";
 					std::cout << "               Programme.exe -X 0.3375 -Q_start -4.0 -Q_end 4.0 -NbPoints 4 -o FileOutput2 -IsShow 0 -dev 1 -Power 2.0\n";
-					std::cout << "      Version : 0.1 du 04 Juillet 2018\n";
+					std::cout << "      Version : 0.15 du 07 Juillet 2018\n";
 					std::cout << "      Auteur : Renaud HENRY\n";
 					std::cout << "      siteweb : http://fractale.io/ \n";
 					return 0;
@@ -507,18 +507,6 @@ int main(int argc, char *argv[])
 					std::cout << "Error 11 " << Str_dev << ": value is not type int " << "\n";
 					return -1;
 				}
-				int count;
-				cudaGetDeviceCount(&count);
-				if (count < dev)
-				{
-					std::cout << "Error 12 " << Str_dev << ": value of dev > countdevice, " << dev << " > " << count << "\n";
-					return -1;
-				}
-				if (dev < 0)
-				{
-					std::cout << "Error 13 " << Str_dev << ": value of dev < 0 , " << dev << " <" << 0 << "\n";
-					return -1;
-				}
 			}
 			else if ((strcmp(argv[i], Str_Filter) == 0))
 			{
@@ -526,16 +514,6 @@ int main(int argc, char *argv[])
 				if (errno)
 				{
 					std::cout << "Error 14 " << Str_Filter << ": value is not type int " << "\n";
-					return -1;
-				}
-				if (Filter >3)
-				{
-					std::cout << "Error 15 " << Str_Filter << ": value of dev > 3, " << Filter << " > " << 3 << "\n";
-					return -1;
-				}
-				if (Filter < 0)
-				{
-					std::cout << "Error 16 " << Str_Filter << ": value of dev < 0 , " << Filter << " < " << 0 << "\n";
 					return -1;
 				}
 			}
@@ -585,7 +563,28 @@ int main(int argc, char *argv[])
 		std::cout << "Error 06 NbPoints < 1:  So NbPoints must be sup 0 \n";
 		return -1;
 	}
-
+	if (Filter >3)
+	{
+		std::cout << "Error 15 " << Str_Filter << ": value of dev > 3, " << Filter << " > " << 3 << "\n";
+		return -1;
+	}
+	if (Filter < 0)
+	{
+		std::cout << "Error 16 " << Str_Filter << ": value of dev < 0 , " << Filter << " < " << 0 << "\n";
+		return -1;
+	}
+	int count;
+	cudaGetDeviceCount(&count);
+	if (count < dev)
+	{
+		std::cout << "Error 12 " << Str_dev << ": value of dev > countdevice, " << dev << " > " << count << "\n";
+		return -1;
+	}
+	if (dev < 0)
+	{
+		std::cout << "Error 13 " << Str_dev << ": value of dev < 0 , " << dev << " <" << 0 << "\n";
+		return -1;
+	}
 	//CST 
 	const int NbPoints = NbPointPerStep;
 
@@ -606,7 +605,7 @@ int main(int argc, char *argv[])
 	std::cout << "cmd for use this configuration: " << "\n";
 	std::cout << "               Programme.exe -X " << X << " -Q_start " << ParameterDelaults.start << " -Q_end " << ParameterDelaults.end << " -NbPoints " << ParameterDelaults.NbPoints << " -o " << NameFile << " -IsShow " << IsShow << " -dev " << dev << " -Power " << POWER << " -Filter " << Filter << " \n";
 
-	
+
 
 
 	std::ofstream file;
@@ -627,7 +626,7 @@ int main(int argc, char *argv[])
 	file << "				NbPoints per step = " << NbPoints << "\n";
 	file << "				ouput File :  " << NameFile << "\n";
 	file << "cmd for use this configuration: " << "\n";
-	file <<"               Programme.exe -X " << X << " -Q_start " << ParameterDelaults.start << " -Q_end " << ParameterDelaults.end << " -NbPoints " << ParameterDelaults.NbPoints << " -o " << NameFile << " -IsShow " << IsShow << " -dev " << dev << " -Power " << POWER << " -Filter " << Filter << " \n";
+	file << "               Programme.exe -X " << X << " -Q_start " << ParameterDelaults.start << " -Q_end " << ParameterDelaults.end << " -NbPoints " << ParameterDelaults.NbPoints << " -o " << NameFile << " -IsShow " << IsShow << " -dev " << dev << " -Power " << POWER << " -Filter " << Filter << " \n";
 	file.close();
 
 	//Init Stat
@@ -846,7 +845,7 @@ int main(int argc, char *argv[])
 					Stat.NbPoint++;
 					filetxt << y << ";" << z << ";" << w << "\n";
 				}
-					
+
 			}
 
 		}
