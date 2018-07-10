@@ -14,7 +14,7 @@
     <ProjectGuid>{5B85DC1A-76D6-487A-A379-A399E645574F}</ProjectGuid>
     <RootNamespace>QMandelbrotCuda3D</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
-    <ProjectName>QMandelbrotCuda3D</ProjectName>
+    <ProjectName>QMandelbrotCuda3D5</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -81,7 +81,9 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="kernel_XYZ.cu" />
+    <CudaCompile Include="kerne_XYZW.cu">
+      <FileType>CppCode</FileType>
+    </CudaCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
