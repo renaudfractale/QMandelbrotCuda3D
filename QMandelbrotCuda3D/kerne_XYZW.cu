@@ -89,7 +89,7 @@ typedef struct 	struct_Q {
 } struct_Q_T;
 
 __managed__  struct_P_Simulation_T *P_Simulation;
-__managed__  short *Tab_Iter;
+__managed__  int *Tab_Iter;
 
 
 __device__  void CreateQ_By_float(struct_Q_T *out, float x, float y, float z, float w)
@@ -146,22 +146,22 @@ __device__ void Get_QPow(struct_Q_T *Q, float pow)
 	}
 }
 // CUDA kernel to Compute itermax of quaternion
-__global__ void kernel(const struct_P_Simulation_T *P_Simulation, short *Tab_Iter)
+__global__ void kernel(const struct_P_Simulation_T *P_Simulation, int *Tab_Iter)
 {
 	//int Tempindex = 0;
 	struct_Q_T Q_Current;
 	float w, x, y, z;
 	int iter = 0;
-	//X
-	x = ((float)blockIdx.x)*P_Simulation->X.step + P_Simulation->X.start;
-	//Y
-	y = ((float)blockIdx.y)*P_Simulation->Y.step + P_Simulation->Y.start;
-	//Z
-	z = ((float)blockIdx.z)*P_Simulation->Z.step + P_Simulation->Z.start;
-	//W
-	w = ((float)threadIdx.x)*P_Simulation->W.step + P_Simulation->W.start;
+	////X
+	//x = ((float)blockIdx.x)*P_Simulation->X.step + P_Simulation->X.start;
+	////Y
+	//y = ((float)blockIdx.y)*P_Simulation->Y.step + P_Simulation->Y.start;
+	////Z
+	//z = ((float)blockIdx.z)*P_Simulation->Z.step + P_Simulation->Z.start;
+	////W
+	//w = ((float)threadIdx.x)*P_Simulation->W.step + P_Simulation->W.start;
 
-	CreateQ_By_float(&Q_Current, x, y, z, w);
+	/*CreateQ_By_float(&Q_Current, x, y, z, w);
 
 	for (iter = 0; iter <= P_Simulation->Iter.max; iter++)
 	{
@@ -176,10 +176,10 @@ __global__ void kernel(const struct_P_Simulation_T *P_Simulation, short *Tab_Ite
 	}
 Fin:
 	if (iter > 0)
-		iter--;
+		iter--;*/
 	int index = blockIdx.x*P_Simulation->X.coef + blockIdx.y*P_Simulation->Y.coef + blockIdx.z*P_Simulation->Z.coef + threadIdx.x*P_Simulation->W.coef;
 	if (index < P_Simulation->max)
-		Tab_Iter[index] = (short)iter;
+		Tab_Iter[index] = index%255;
 	else
 		printf("%d > %d", index, P_Simulation->max);
 }
@@ -1033,11 +1033,9 @@ int main(int argc, char *argv[])
 
 					if (Config.isShow)
 						std::cout << "cudaMallocManaged Config  -->  Start" << "\n";
-
-
 					// Allocate Unified Memory -- accessible from CPU or GPU
 					cudaMallocManaged(&P_Simulation, sizeof(struct_P_Simulation_T));
-					cudaMallocManaged(&Tab_Iter, max * sizeof(short));
+					cudaMallocManaged(&Tab_Iter, max * sizeof(int));
 					if (Config.isShow)
 						std::cout << "cudaMallocManaged Config  -->  End " << "\n";
 
@@ -1102,7 +1100,7 @@ int main(int argc, char *argv[])
 					if (Config.isShow)
 						std::cout << "Tab_Iter and Tab_Histo Init  -->  Start" << "\n";
 					for (int i = 0; i < max; i++)
-						Tab_Iter[i] = (short)0;
+						Tab_Iter[i] = 0;
 
 					for (int i = 0; i <= Config.Iter.max; i++)
 						Tab_Histo[i] = 0;
