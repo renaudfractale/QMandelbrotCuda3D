@@ -11,7 +11,7 @@ Parameters Current :
 				Power = 2
 				dev = 1
 				IsShow = 1
-				NbPoints per step = 16
+				NbPoints per step = 64
 				ouput File :  O
 cmd for use this configuration: 
                C:\Users\Renaud\documents\visual studio 2015\Projects\QMandelbrotCuda3D\x64\Debug\QMandelbrotCuda3D5.exe  -w 0.3375 -xmin -20 -xmax 20 -xNbStep 4 -ymin -20 -ymax 20 -yNbStep 4 -zmin -20 -zmax 20 -zNbStep 4 -iterMin 10 -iterMax 255 -device 1 -filter 0 -power 2 -isShow 1 -rMax 4 -o O 

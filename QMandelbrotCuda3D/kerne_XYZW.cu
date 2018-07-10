@@ -24,7 +24,7 @@
 #define ISSHOW 1;
 #define RMAX 4.0f;
 
-#define NBPOINTS 16;
+#define NBPOINTS 64;
 
 // struct sur la gestion des dimensions
 typedef struct 	struct_P_float {
@@ -152,16 +152,16 @@ __global__ void kernel(const struct_P_Simulation_T *P_Simulation, int *Tab_Iter)
 	struct_Q_T Q_Current;
 	float w, x, y, z;
 	int iter = 0;
-	////X
-	//x = ((float)blockIdx.x)*P_Simulation->X.step + P_Simulation->X.start;
-	////Y
-	//y = ((float)blockIdx.y)*P_Simulation->Y.step + P_Simulation->Y.start;
-	////Z
-	//z = ((float)blockIdx.z)*P_Simulation->Z.step + P_Simulation->Z.start;
-	////W
-	//w = ((float)threadIdx.x)*P_Simulation->W.step + P_Simulation->W.start;
+	//X
+	x = ((float)blockIdx.x)*P_Simulation->X.step + P_Simulation->X.start;
+	//Y
+	y = ((float)blockIdx.y)*P_Simulation->Y.step + P_Simulation->Y.start;
+	//Z
+	z = ((float)blockIdx.z)*P_Simulation->Z.step + P_Simulation->Z.start;
+	//W
+	w = ((float)threadIdx.x)*P_Simulation->W.step + P_Simulation->W.start;
 
-	/*CreateQ_By_float(&Q_Current, x, y, z, w);
+	CreateQ_By_float(&Q_Current, x, y, z, w);
 
 	for (iter = 0; iter <= P_Simulation->Iter.max; iter++)
 	{
@@ -176,10 +176,10 @@ __global__ void kernel(const struct_P_Simulation_T *P_Simulation, int *Tab_Iter)
 	}
 Fin:
 	if (iter > 0)
-		iter--;*/
+		iter--;
 	int index = blockIdx.x*P_Simulation->X.coef + blockIdx.y*P_Simulation->Y.coef + blockIdx.z*P_Simulation->Z.coef + threadIdx.x*P_Simulation->W.coef;
 	if (index < P_Simulation->max)
-		Tab_Iter[index] = index%255;
+		Tab_Iter[index] = iter;// index % 255;
 	else
 		printf("%d > %d", index, P_Simulation->max);
 }
