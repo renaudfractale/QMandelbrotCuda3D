@@ -15,7 +15,7 @@
 #define Dim_step 10.0f;
 
 #define ITER_MAX 255;
-#define ITER_MIN 10;
+#define ITER_MIN 1;
 #define ITER_isFix 0;
 
 #define DEV 1;
@@ -25,6 +25,24 @@
 #define RMAX 4.0f;
 
 #define NBPOINTS 64;
+//Strcture state
+
+typedef struct 	struct_Stat_float {
+	float Xmin = Dim_end
+	float Xmax = Dim_start
+	float Wmin = Dim_end
+	float Wmax = Dim_start
+	float Ymin = Dim_end
+	float Ymax = Dim_start
+	float Zmin = Dim_end
+	float Zmax = Dim_start
+	float Wstep = 0.0f;
+	float Xstep = 0.0f;
+	float Ystep = 0.0f;
+	float Zstep = 0.0f;
+	unsigned long NbPoint=0;
+} struct_Stat_float_T;
+
 
 // struct sur la gestion des dimensions
 typedef struct 	struct_P_float {
@@ -88,8 +106,150 @@ typedef struct 	struct_Q {
 	float w;
 } struct_Q_T;
 
-__managed__  struct_P_Simulation_T *P_Simulation;
-__managed__  int *Tab_Iter;
+//__managed__  struct_P_Simulation_T *P_Simulation;
+//__managed__  int *Tab_Iter;
+
+__host__  void CreateQ_By_float_H(struct_Q_T *out, float x, float y, float z, float w)
+{
+	out->x = x;
+	out->y = y;
+	out->z = z;
+	out->w = w;
+}
+
+__host__  float  Get_QNorm_H(struct_Q_T *Q)
+{
+	return sqrtf(Q->x*Q->x + Q->y*Q->y + Q->z*Q->z + Q->w*Q->w);
+}
+
+__host__ void Get_QPow_H(struct_Q_T *Q, float pow)
+{
+	float A = Get_QNorm_H(Q);
+	float theta = 0.0f;
+	float B = 0.0f;
+	float R = 0.0f;
+	if (pow > 0.0f && A>0.000001f)
+	{
+		float coef = 1.0f;
+		if (A<1.0f)
+		{
+			//printf("%f *******\n", A);
+			coef = 1 / A;
+			Q->x *= coef;
+			Q->y *= coef;
+			Q->z *= coef;
+			Q->z *= coef;
+
+		}
+		A = Get_QNorm_H(Q);
+		//printf("%f +++++++++\n", A);
+		theta = acosf(Q->w / A)*pow;
+		B = sqrt(A*A - Q->w*Q->w);
+		R = exp2f(logf(A / coef)* pow);
+		Q->x = R*sinf(theta)*(Q->x / B);
+		Q->y = R*sinf(theta)*(Q->y / B);
+		Q->z = R*sinf(theta)*(Q->z / B);
+		Q->z = R*cosf(theta);
+
+	}
+	else
+	{
+		//printf("%f --------\n", A);
+		Q->w = 0.0f;
+		Q->x = 0.0f;
+		Q->y = 0.0f;
+		Q->z = 0.0f;
+
+	}
+}
+
+__host__ int  GetQIter_H(struct_P_Simulation_T *P_Simulation_DEVICE, int  *x_filter, int  *y_filter, int *z_filter, int *w_filter)
+{
+	//int Tempindex = 0;
+	struct_Q_T Q_Current;
+	float w, x, y, z;
+	int iter_computed;
+	//X
+	x = ((float)*x_filter)*P_Simulation_DEVICE->X.step + P_Simulation_DEVICE->X.start;
+	//Y
+	y = ((float)*y_filter)*P_Simulation_DEVICE->Y.step + P_Simulation_DEVICE->Y.start;
+	//Z
+	z = ((float)*z_filter)*P_Simulation_DEVICE->Z.step + P_Simulation_DEVICE->Z.start;
+	//W
+	w = ((float)*w_filter)*P_Simulation_DEVICE->W.step + P_Simulation_DEVICE->W.start;
+
+
+
+	CreateQ_By_float_H(&Q_Current, x, y, z, w);
+
+	for (iter_computed = 0; iter_computed <= P_Simulation_DEVICE->Iter.max; iter_computed++)
+	{
+		Get_QPow_H(&Q_Current, P_Simulation_DEVICE->power);
+		Q_Current.x += x;
+		Q_Current.y += y;
+		Q_Current.z += z;
+		Q_Current.w += w;
+
+		if (Get_QNorm_H(&Q_Current) > P_Simulation_DEVICE->rMax)
+		{
+			if (iter_computed > 0)
+				iter_computed--;
+			return iter_computed;
+		}
+	}
+	if (iter_computed > 0)
+		iter_computed--;
+	return iter_computed;
+}
+__host__ bool  FilterQ_H(int *Filter, int *Nx, int *Ny, int *Nz, int *Nw, int iter,
+	struct_P_Simulation_T *P_Simulation)
+{
+	if (*Filter == 0)
+		return true;
+	int iter_computed = 0;
+
+	int pasx = 1;
+	if (P_Simulation->X.NbStep == 1)
+		pasx = 0;
+
+	int pasy = 1;
+	if (P_Simulation->Y.NbStep == 1)
+		pasy = 0;
+
+	int pasz = 1;
+	if (P_Simulation->Z.NbStep == 1)
+		pasz = 0;
+
+	int pasw = 1;
+	if (P_Simulation->W.NbStep == 1)
+		pasw = 0;
+
+
+	for (int x_filter = *Nx - pasx ; x_filter <= *Nx + pasx; x_filter++)
+	{
+		for (int y_filter = *Ny - pasy; y_filter <= *Ny + pasy; y_filter++)
+		{
+			for (int z_filter = *Nz - pasz; z_filter <= *Nz + pasz; z_filter++)
+			{
+				for (int w_filter = *Nw - pasw; w_filter <= *Nw + pasw; w_filter++)
+				{
+					iter_computed = GetQIter_H(P_Simulation, &x_filter, &y_filter, &z_filter, &w_filter);
+					if (*Filter == 1)
+					{
+						if (iter_computed != iter)
+							return true;
+					}
+					else //filter==2
+					{
+						if (iter_computed == 0)
+							return true;
+					}
+				}
+			}
+		}
+	}
+	return false;
+}
 
 
 __device__  void CreateQ_By_float(struct_Q_T *out, float x, float y, float z, float w)
@@ -188,11 +348,38 @@ int main(int argc, char *argv[])
 	//Config
 		struct_P_All_T Config;
 		strcpy(Config.nameFile.root, "O");
-		Config.W.end = 0.3375f;
-		Config.W.start = 0.3375f;
-		Config.W.step = 1.0f;
-		Config.W.isFix = 1;
-		Config.W.NbStep = 1;
+		if (argc == 1)
+		{
+			Config.W.end = -0.3375f;
+			Config.W.start = -0.3375f;
+			Config.W.step = 1.0f;
+			Config.W.isFix = 1;
+			Config.W.NbStep = 1;
+
+
+			Config.X.isFix = 2;
+			Config.X.start = -10.0f;
+			Config.X.end = 10.0f;
+
+			Config.Y.isFix = 2;
+			Config.Y.start = -10.0f;
+			Config.Y.end = 10.0f;
+
+			Config.Z.isFix = 2;
+			Config.Z.start = -10.0f;
+			Config.Z.end = 10.0f;
+
+			Config.filter = 2;
+
+			//Config.Iter.isFix = 1;
+			//Config.Iter.max = 2;
+			//Config.Iter.min = 2;
+			//Config.rMax = 2;
+		}
+
+
+	//Stat
+		struct_Stat_float_T Stat;
 
 	//Arg Help
 		char Str_H[] = "-h";
@@ -853,7 +1040,8 @@ int main(int argc, char *argv[])
 	//Verification filter
 	if (Config.filter >= 0 && Config.filter <= 2)
 	{
-		; //OK
+		if (Config.Iter.isFix == 1 && Config.filter == 2)
+			Config.filter = 1;
 	}
 	else
 	{
@@ -974,6 +1162,22 @@ int main(int argc, char *argv[])
 
 	file << "\n";
 	file.close();
+	/********  Clear File ************/
+	std::ofstream filetxt;
+	filetxt.open(Config.nameFile.txt);
+	filetxt.close();
+
+	file.open(Config.nameFile.csv);
+	file << "X;Y;Z;W;iter;\n";
+	file.close();
+
+
+	file.open(Config.nameFile.histo);
+	file << "index;";
+	for (int i = 0; i <= Config.Iter.max; i++)
+		file << i << ";";
+	file << "\n";
+	file.close();
 
 	//Affiche Help
 	FILE *fileman;
@@ -1004,13 +1208,14 @@ int main(int argc, char *argv[])
 			{
 				for (int NoZ = 0; NoZ < Config.Z.NbStep; NoZ++)
 				{
+					NoConfig++;
 					std::cout << "---------------------------------------------------\n";
 					std::cout << "Config  " << NoConfig << " sur " << NbConfig << "\n";
 
 					float W = NoW*Config.W.step + Config.W.start;
-					float X = NoW*Config.X.step + Config.X.start;
-					float Y = NoW*Config.Y.step + Config.Y.start;
-					float Z = NoW*Config.Z.step + Config.Z.start;
+					float X = NoX*Config.X.step + Config.X.start;
+					float Y = NoY*Config.Y.step + Config.Y.start;
+					float Z = NoZ*Config.Z.step + Config.Z.start;
 
 					int PasW = Config.NbPointByStep;
 					if (Config.W.NbStep == 1)
@@ -1033,6 +1238,9 @@ int main(int argc, char *argv[])
 
 					if (Config.isShow)
 						std::cout << "cudaMallocManaged Config  -->  Start" << "\n";
+
+					struct_P_Simulation_T *P_Simulation;
+					int *Tab_Iter;
 					// Allocate Unified Memory -- accessible from CPU or GPU
 					cudaMallocManaged(&P_Simulation, sizeof(struct_P_Simulation_T));
 					cudaMallocManaged(&Tab_Iter, max * sizeof(int));
@@ -1045,7 +1253,7 @@ int main(int argc, char *argv[])
 					P_Simulation->W.start = W;
 					P_Simulation->W.end = W+ Config.W.step;
 					P_Simulation->W.NbStep = PasW;
-					if(PasW ==0)
+					if(PasW ==1)
 						P_Simulation->W.step = 0.0f;
 					else
 						P_Simulation->W.step = (Config.W.step) / (PasW-1);
@@ -1055,7 +1263,7 @@ int main(int argc, char *argv[])
 					P_Simulation->X.start = X;
 					P_Simulation->X.end = X + Config.X.step;
 					P_Simulation->X.NbStep = PasX;
-					if (PasX == 0)
+					if (PasX == 1)
 						P_Simulation->X.step = 0.0f;
 					else
 						P_Simulation->X.step = (Config.X.step) / (PasX-1);
@@ -1065,7 +1273,7 @@ int main(int argc, char *argv[])
 					P_Simulation->Y.start = Y;
 					P_Simulation->Y.end = Y + Config.Y.step;
 					P_Simulation->Y.NbStep = PasY;
-					if (PasY == 0)
+					if (PasY == 1)
 						P_Simulation->Y.step = 0.0f;
 					else
 						P_Simulation->Y.step = (Config.Y.step) / (PasY - 1);
@@ -1075,11 +1283,19 @@ int main(int argc, char *argv[])
 					P_Simulation->Z.start = Z;
 					P_Simulation->Z.end = Z + Config.Z.step;
 					P_Simulation->Z.NbStep = PasZ;
-					if (PasZ == 0)
+					if (PasZ == 1)
 						P_Simulation->Z.step = 0.0f;
 					else
 						P_Simulation->Z.step = (Config.Z.step) / (PasZ - 1);
 					P_Simulation->Z.coef = 1;
+
+					//Stat Step
+
+					Stat.Wstep = P_Simulation->W.step;
+					Stat.Xstep = P_Simulation->X.step;
+					Stat.Ystep = P_Simulation->Y.step;
+					Stat.Zstep = P_Simulation->Z.step;
+
 
 					//Parametrage Iter
 					P_Simulation->Iter.max = Config.Iter.max;
@@ -1137,8 +1353,132 @@ int main(int argc, char *argv[])
 						std::cout << "Soit  :  " << (float)(Nbpoint_iter / ((float)max / 10000.0f)) / 100.0f << "%  soit " << Nbpoint_iter << "pt sur " << max << "pt \n";
 						std::cout << "Analyzer Simulation -->  End" << "\n";
 					}
-						
 
+					if (Config.isShow)
+						std::cout << "Write Histogram -->  Start" << "\n";
+					file.open(Config.nameFile.histo, std::ofstream::out | std::ofstream::app);
+					file << NoConfig << ";";
+					for (int i = 0; i <= Config.Iter.max; i++)
+						file << Tab_Histo[i] << ";";
+					file << "\n";
+					file.close();
+					if (Config.isShow)
+						std::cout << "Write Histogram -->  End" << "\n";
+					
+					
+					file.open(Config.nameFile.csv, std::ofstream::out | std::ofstream::app);
+					filetxt.open(Config.nameFile.txt , std::ofstream::out | std::ofstream::app);
+
+					
+					for (int i = 0; i < max; i++)
+					{
+						int j = i;
+
+						//W
+						int iW = 0;
+						if (PasW > 1)
+						{
+							iW = j / P_Simulation->W.coef;
+						}
+						//printf("index = %d  - Z Tempindex = %d \n", i, Tempindex);
+						float w = (float)iW*P_Simulation->W.step + P_Simulation->W.start;
+						// on retranche 
+						j -= iW*P_Simulation->W.coef;
+
+						//X
+						int iX = 0;
+						if (PasX > 1)
+						{
+							iX = j / P_Simulation->X.coef;
+						}
+						float x = (float)iX*P_Simulation->X.step + P_Simulation->X.start;
+						// on retranche 
+						j -= iX*P_Simulation->X.coef;
+
+						//Y
+						int iY = 0;
+						if (PasY > 1)
+						{
+							iY = j / P_Simulation->Y.coef;
+						}
+						float y = (float)iY*P_Simulation->Y.step + P_Simulation->Y.start;
+						// on retranche 
+						j -= iY*P_Simulation->Y.coef;
+
+						//Z
+						int iZ = 0;
+						if (PasZ > 1)
+						{
+							iZ = j / P_Simulation->Z.coef;
+						}
+						float z = (float)iZ*P_Simulation->Z.step + P_Simulation->Z.start;
+						// on retranche 
+						j -= iZ*P_Simulation->Z.coef;
+
+
+						int iter = Tab_Iter[i];
+						if ((iter >= Config.Iter.min && Config.Iter.isFix==2) || (iter == Config.Iter.min && Config.Iter.isFix == 1))
+						{
+							int filter = Config.filter;
+							if (FilterQ_H(&filter, &iX, &iY, &iZ, &iW, iter, P_Simulation))
+							{
+								file << x << ";" << y << ";" << z << ";" << w << ";" << iter << ";\n";
+								int NbDim = 0;
+								if (PasW > 1)
+								{
+									filetxt << w << ";";
+									NbDim++;
+								}
+									
+								if (PasX > 1)
+								{
+									filetxt << x << ";";
+									NbDim++;
+								}
+									
+								if (PasY > 1)
+								{
+									filetxt << y << ";"; 
+									NbDim++;
+								}
+									
+								if (PasZ > 1)
+								{
+									filetxt << z << ";"; 
+									NbDim++;
+								}
+								
+								if(NbDim>=3)
+									filetxt << iter << "\n";
+								else
+									filetxt << ((float)iter)/((float)Config.Iter.max)*3.0f << "\n";
+							}
+							if (w > Stat.Wmax)
+								Stat.Wmax = w;
+							if (w < Stat.Wmin)
+								Stat.Wmin = w;
+
+							if (x > Stat.Xmax)
+								Stat.Xmax = x;
+							if (x < Stat.Xmin)
+								Stat.Xmin = x;
+
+							if (y > Stat.Ymax)
+								Stat.Ymax = y;
+							if (y < Stat.Ymin)
+								Stat.Ymin = y;
+
+							if (z > Stat.Zmax)
+								Stat.Zmax = z;
+							if (z < Stat.Zmin)
+								Stat.Zmin = z;
+
+							Stat.NbPoint++;
+							}
+
+					}
+					file.close();
+					filetxt.close();
 
 					if (Config.isShow)
 						std::cout << "Clear Mem + Reste  -->  Start" << "\n";
@@ -1151,5 +1491,25 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+
+	file.open(Config.nameFile.stat, std::ofstream::out | std::ofstream::app);
+	file << "Statistiques : \n";
+	file << "				X min = " << Stat.Xmin << "\n";
+	file << "				X max = " << Stat.Xmax << "\n";
+	file << "				Y min = " << Stat.Ymin << "\n";
+	file << "				Y max = " << Stat.Ymax << "\n";
+	file << "				Z min = " << Stat.Zmin << "\n";
+	file << "				Z max = " << Stat.Zmax << "\n";
+	file << "				W min = " << Stat.Wmin << "\n";
+	file << "				W max = " << Stat.Wmax << "\n";
+	file << "				X step = " << Stat.Xstep << "\n";
+	file << "				Y step = " << Stat.Ystep << "\n";
+	file << "				Z step = " << Stat.Zstep << "\n";
+	file << "				W step = " << Stat.Wstep << "\n";
+	file << "				NbPoint plot = " << Stat.NbPoint << "\n";
+	file.close();
+
+
+
 	return 0;//Fin du programme
 }

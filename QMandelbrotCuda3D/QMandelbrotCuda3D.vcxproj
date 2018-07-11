@@ -14,7 +14,7 @@
     <ProjectGuid>{5B85DC1A-76D6-487A-A379-A399E645574F}</ProjectGuid>
     <RootNamespace>QMandelbrotCuda3D</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
-    <ProjectName>QMandelbrotCuda3D5</ProjectName>
+    <ProjectName>QMandelbrotCuda3D1</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -58,9 +58,10 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <AdditionalDeps>$(ProjectDir)%(AdditionalDeps)</AdditionalDeps>
-      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
+      <GenerateRelocatableDeviceCode>false</GenerateRelocatableDeviceCode>
       <CudaRuntime>Shared</CudaRuntime>
       <GPUDebugInfo>false</GPUDebugInfo>
+      <Optimization>InheritFromHost</Optimization>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -81,8 +82,9 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <AdditionalDeps>$(ProjectDir)%(AdditionalDeps)</AdditionalDeps>
-      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
+      <GenerateRelocatableDeviceCode>false</GenerateRelocatableDeviceCode>
       <CudaRuntime>Shared</CudaRuntime>
+      <Optimization>InheritFromHost</Optimization>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
