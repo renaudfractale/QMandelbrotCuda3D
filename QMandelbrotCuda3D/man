@@ -1,36 +1,50 @@
 Help :  
-      -NbPoints : numbers of points 
-                  Ctrt 01 : if start = end , NbPoints must be equal to 1 
-                  Ctrt 02 : if start < end , NbPoints must be sup to 1 
-                  Ctrt 03 : NbPoints must be type int
-      -Q_start : value  of start 
-                  Ctrt 03 :  start >= end 
-                  Ctrt 03 : start must be type float
-      -Q_end : value  of end 
-                  Ctrt 03 :  start >= end 
-                  Ctrt 03 : end must be type float
+      -h / --help : show help
+	  
+	  *********** Parameter X *********************
+      -x : fix x value
+	  -xmax : fix max value of x, incompatible to -x
+	  -xmin : fix min value of x, incompatible to -x
+	  -xNbStep : fix number step of x, incompatible to -x
+	 
+	  *********** Parameter Y *********************
+      -y : fix y value
+	  -ymax : fix max value of y, incompatible to -y
+	  -ymin : fix min value of y, incompatible to -y
+	  -yNbStep : fix number step of y, incompatible to -y
+	  
+	  *********** Parameter Z *********************
+      -z : fix z value
+	  -zmax : fix max value of z, incompatible to -z
+	  -zmin : fix min value of z, incompatible to -z
+	  -zNbStep : fix number step of z, incompatible to -z
+	  
+	  *********** Parameter W *********************
+      -w : fix w value
+	  -wmax : fix max value of w, incompatible to -w
+	  -wmin : fix min value of w, incompatible to -w
+	  -wNbStep : fix number step of w, incompatible to -w
+	
+	  *********** Parameter iter *********************
+      -iter : fix iter value
+	  -iterMax : fix max value of iter, incompatible to -iter
+	  -iterMin : fix min value of iter, incompatible to -iter
+	  
       -o : Output File 
-                  Ctrt 05 :  len  must be inf 100 char 
-      -X : value of x 
-                  Ctrt 03 : x must be type float
+ 
       -Power : value of Power 
-                  Ctrt 03 : Power must be type float
-                  Ctrt 03 : Power must be sup 0.0 
-      -dev : index of device GPU, 0 by default 
-            --> you have " << count << " device(s) in your PC 
-                  Ctrt 03 : dev must be type int
-                  Ctrt 03 : dev must be sup or equal 0 
-      -IsShow : bool if show message in cmd, true (1) by default 
-                  Ctrt 03 : IsShow must be type int (0 or 1)
+
+      -device : index of device GPU, 0 by default 
+
+	  -IsShow : bool if show message in cmd, true (1) by default 
+
       -Filter : int if you would to filter clould points, 0 by default 
-                  Ctrt 03 : Filter must be type int (0 or 1 or 2)
-                  Option 0 : Not Filter 
-                  Option 1 : Filter on iter_around  must be equal inter_computed 
-                  Option 2 : Filter on iter_around  must be sup 0 
-      -h / --help : show help 
+
+	  -rMax : fix max valu od rMax
+	  
       Example :
-               Programme.exe -X 0.3375 -Q_start -3.0 -Q_end 3.0 -NbPoints 4 -Power 2.5 -o FileOutput 
-               Programme.exe -X 0.3375 -Q_start -4.0 -Q_end 4.0 -NbPoints 4 -o FileOutput2 -IsShow 0 -dev 1 -Power 2.0
-      Version : 0.15 du 07 Juillet 2018
+               QMandelbrotCuda3D1.exe  -w -0.3375 -xmin -10 -xmax 10 -xNbStep 4 -ymin -10 -ymax 10 -yNbStep 4 -zmin -10 -zmax 10 -zNbStep 4 -iterMin 1 -iterMax 255 -device 0 -filter 2 -power 2 -isShow 1 -rMax 4 -o O 
+      
+	  Version : 0.30 du 11 Juillet 2018
       Auteur : Renaud HENRY
       siteweb : http://fractale.io/ 
