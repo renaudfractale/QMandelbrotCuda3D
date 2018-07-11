@@ -10,11 +10,82 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="kerne_XYZW_V0,35.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </CudaCompile>
+    <CudaCompile Include="Struct_lib.cuh">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <HostDebugInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</HostDebugInfo>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateRelocatableDeviceCode>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateRelocatableDeviceCode>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="host_lib.cuh">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <HostDebugInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</HostDebugInfo>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateRelocatableDeviceCode>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateRelocatableDeviceCode>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="device_lib.cuh">
+      <FileType>CppCode</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <HostDebugInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</HostDebugInfo>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateRelocatableDeviceCode>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateRelocatableDeviceCode>
+    </CudaCompile>
+    <CudaCompile Include="host_lib.cu">
+      <FileType>CppCode</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <HostDebugInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</HostDebugInfo>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateRelocatableDeviceCode>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateRelocatableDeviceCode>
+    </CudaCompile>
+    <CudaCompile Include="device_lib.cu">
+      <FileType>CppCode</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <HostDebugInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</HostDebugInfo>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateRelocatableDeviceCode>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateRelocatableDeviceCode>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="compute_lib.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <FileType>CppCode</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </CudaCompile>
+    <CudaCompile Include="menu_lib.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <FileType>CppCode</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </CudaCompile>
+    <CudaCompile Include="menu_lib.cuh">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <FileType>CppCode</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="compute.cuh">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </CudaCompile>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5B85DC1A-76D6-487A-A379-A399E645574F}</ProjectGuid>
     <RootNamespace>QMandelbrotCuda3D</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
-    <ProjectName>QMandelbrotCuda3D1</ProjectName>
+    <ProjectName>QMandelbrotCuda3D</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -57,8 +128,8 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <AdditionalDeps>$(ProjectDir)%(AdditionalDeps)</AdditionalDeps>
-      <GenerateRelocatableDeviceCode>false</GenerateRelocatableDeviceCode>
+      <AdditionalDeps>$(LocalDebuggerWorkingDirectory);%(AdditionalDeps)</AdditionalDeps>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <CudaRuntime>Shared</CudaRuntime>
       <GPUDebugInfo>false</GPUDebugInfo>
       <Optimization>InheritFromHost</Optimization>
@@ -81,17 +152,12 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <AdditionalDeps>$(ProjectDir)%(AdditionalDeps)</AdditionalDeps>
-      <GenerateRelocatableDeviceCode>false</GenerateRelocatableDeviceCode>
+      <AdditionalDeps>$(LocalDebuggerWorkingDirectory);%(AdditionalDeps)</AdditionalDeps>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <CudaRuntime>Shared</CudaRuntime>
       <Optimization>InheritFromHost</Optimization>
     </CudaCompile>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <CudaCompile Include="kerne_XYZW.cu">
-      <FileType>CppCode</FileType>
-    </CudaCompile>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 9.2.targets" />
